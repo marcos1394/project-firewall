@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { OverviewChart } from '@/components/OverviewChart'
-import { QuickAttack } from '@/components/QuickAttack'
+import { CampaignLauncher } from '@/components/CampaignLauncher'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, MousePointerClick, ShieldAlert, Activity, Zap } from "lucide-react"
 
@@ -89,17 +89,17 @@ export default async function AdminDashboard() {
 
         {/* Panel de Ataque (Ocupa 3 columnas) */}
         <Card className="col-span-3 bg-slate-900/50 border-slate-800">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-                <Zap className="h-5 w-5 text-yellow-500"/>
-                Lanzador Táctico
-            </CardTitle>
-            <CardDescription className="text-slate-400">
-              Inicia una simulación de phishing a un objetivo específico.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <QuickAttack />
+  <CardHeader>
+    <CardTitle className="text-white flex items-center gap-2">
+        <Zap className="h-5 w-5 text-yellow-500"/>
+        Gestor de Campañas
+    </CardTitle>
+    <CardDescription className="text-slate-400">
+      Sube un CSV para iniciar una simulación masiva.
+    </CardDescription>
+  </CardHeader>
+  <CardContent>
+    <CampaignLauncher />
             
             {/* Live Feed Simulado */}
             <div className="mt-8 pt-6 border-t border-slate-800">

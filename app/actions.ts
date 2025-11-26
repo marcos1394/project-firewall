@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { Resend } from 'resend'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import Papa from 'papaparse'
 
 // Inicializar Resend con la API Key del entorno
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -198,5 +199,93 @@ export async function sendSimulation(formData: FormData) {
   } catch (error: any) {
     console.error('Server Error:', error)
     return { message: 'Error crítico del servidor.', status: 'error' }
+  }
+}
+
+export async function launchCampaign(prevState: any, formData: FormData) {
+  const campaignName = formData.get('campaignName') as string
+  const templateType = formData.get('templateType') as string
+  const csvFile = formData.get('csvFile') as File
+
+  if (!csvFile || csvFile.size === 0) {
+    return { message: 'Por favor sube un archivo CSV válido.', status: 'error' }
+  }
+
+  // 1. Leer y Parsear el CSV
+  const text = await csvFile.text()
+  const parsed = Papa.parse(text, { header: false }) // Asumimos lista simple sin headers o columna 1
+  const emails = parsed.data
+    .flat()
+    .map((e: any) => e?.toString().trim())
+    .filter((e) => e && e.includes('@')) // Filtro básico de emails válidos
+
+  if (emails.length === 0) {
+    return { message: 'No se encontraron emails válidos en el archivo.', status: 'error' }
+  }
+
+  try {
+    // 2. Crear la Campaña en DB
+    const { data: campaign, error: campError } = await supabase
+      .from('campaigns')
+      .insert({ name: campaignName, template_type: templateType, status: 'sending' })
+      .select()
+      .single()
+
+    if (campError) throw new Error(campError.message)
+
+    // 3. Preparar los Targets para inserción masiva
+    const targetsData = emails.map(email => ({
+      campaign_id: campaign.id,
+      email: email,
+      status: 'pending'
+    }))
+
+    const { error: targetsError } = await supabase
+      .from('campaign_targets')
+      .insert(targetsData)
+
+    if (targetsError) throw new Error(targetsError.message)
+
+    // 4. ENVIAR CORREOS (En producción usaríamos una Queue como Redis/Inngest, para MVP hacemos loop)
+    // Usamos el template seleccionado
+    const template = TEMPLATES[templateType]
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://security.kinetis.org'
+
+    let sentCount = 0
+
+    // Ejecutamos en paralelo limitado (Promise.all) para velocidad
+    await Promise.all(emails.map(async (email) => {
+      // Link único para rastrear ESTA campaña y ESTE usuario
+      // IMPORTANTE: Ahora pasamos campaign_id para agrupar las métricas
+      const trackingLink = `${baseUrl}/api/track?email=${encodeURIComponent(email)}&c=${campaign.id}`
+
+      const { error } = await resend.emails.send({
+        from: template.from,
+        to: [email],
+        subject: template.subject,
+        html: template.getHtml(trackingLink)
+      })
+
+      if (!error) {
+        // Actualizar estado a 'sent' en DB (sin await para no bloquear)
+        supabase.from('campaign_targets')
+          .update({ status: 'sent', sent_at: new Date().toISOString() })
+          .match({ campaign_id: campaign.id, email: email })
+          .then() 
+        sentCount++
+      }
+    }))
+
+    // 5. Cerrar Campaña
+    await supabase.from('campaigns').update({ status: 'completed' }).eq('id', campaign.id)
+
+    return { 
+      message: `Campaña lanzada. ${sentCount}/${emails.length} correos enviados.`, 
+      status: 'success' 
+    }
+
+  } catch (e: any) {
+    console.error(e)
+    return { message: 'Error de campaña: ' + e.message, status: 'error' }
   }
 }
