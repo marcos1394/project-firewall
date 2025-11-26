@@ -285,3 +285,66 @@ export async function createTemplate(prevState: any, formData: FormData) {
     return { message: 'Error al crear plantilla: ' + e.message, status: 'error' }
   }
 }
+
+// ==========================================
+// 7. GESTOR DE ORGANIZACIONES (Multi-Tenancy)
+// ==========================================
+
+export async function createOrganization(prevState: any, formData: FormData) {
+  const name = formData.get('name') as string
+  const domain = formData.get('domain') as string
+
+  if (!name) return { message: 'El nombre es obligatorio', status: 'error' }
+
+  try {
+    const { error } = await supabase.from('organizations').insert({
+      name,
+      domain
+    })
+
+    if (error) throw new Error(error.message)
+    
+    // Revalidamos path
+    redirect('/admin-lab/clients')
+
+  } catch (e: any) {
+    if (e.message === 'NEXT_REDIRECT') throw e
+    return { message: 'Error: ' + e.message, status: 'error' }
+  }
+}
+
+// Importar empleados al Directorio Persistente
+export async function importDirectory(prevState: any, formData: FormData) {
+  const organizationId = formData.get('organizationId') as string
+  const csvFile = formData.get('csvFile') as File
+
+  if (!csvFile || !organizationId) return { message: 'Datos incompletos', status: 'error' }
+
+  // Parsear CSV
+  const text = await csvFile.text()
+  const parsed = Papa.parse(text, { header: false })
+  const emails = parsed.data.flat().map((e: any) => e?.toString().trim()).filter(e => e && e.includes('@'))
+
+  if (emails.length === 0) return { message: 'CSV vacío', status: 'error' }
+
+  try {
+    // Preparar datos para upsert (Insertar o Actualizar si ya existe)
+    const employeesData = emails.map(email => ({
+      organization_id: organizationId,
+      email: email,
+      risk_level: 'unknown'
+    }))
+
+    // Upsert masivo (ignora duplicados gracias al UNIQUE constraint)
+    const { error } = await supabase
+      .from('employees')
+      .upsert(employeesData, { onConflict: 'organization_id,email' })
+
+    if (error) throw new Error(error.message)
+
+    return { message: `Directorio actualizado. ${emails.length} registros procesados.`, status: 'success' }
+
+  } catch (e: any) {
+    return { message: 'Error al importar: ' + e.message, status: 'error' }
+  }
+}
