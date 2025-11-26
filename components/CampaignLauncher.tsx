@@ -6,11 +6,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2, UploadCloud, FileSpreadsheet } from "lucide-react"
+import { TemplateGallery } from './TemplateGallery'
 
 export function CampaignLauncher() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<any>(null)
   const [fileName, setFileName] = useState('')
+  const [selectedTemplate, setSelectedTemplate] = useState('')
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -23,6 +25,7 @@ export function CampaignLauncher() {
     setMessage(res)
     setLoading(false)
   }
+  // selectedTemplate and setSelectedTemplate are managed by useState above
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -39,17 +42,12 @@ export function CampaignLauncher() {
             />
         </div>
         
-        <div className="space-y-2">
-            <Label className="text-slate-400">Payload (Plantilla)</Label>
-            <select 
-                name="templateType" 
-                className="w-full bg-slate-950 border border-slate-800 rounded-md p-2.5 text-sm text-white focus:ring-1 focus:ring-indigo-500 outline-none"
-            >
-                <option value="google-security">🔓 Google Security Alert</option>
-                <option value="hr-payroll">💰 RRHH Nómina (Payroll)</option>
-                <option value="urgent-file">⚖️ Legal Urgent Doc</option>
-            </select>
-        </div>
+        <div className="space-y-3">
+    <Label className="text-slate-400">Seleccionar Vector de Ataque</Label>
+    <TemplateGallery onSelect={(slug) => setSelectedTemplate(slug)} />
+    {/* Input oculto vital para que funcione el form action */}
+    <input type="hidden" name="templateType" value={selectedTemplate} required />
+</div>
       </div>
 
       {/* 2. Carga de Archivo (Drag & Drop visual) */}

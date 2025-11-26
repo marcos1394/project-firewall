@@ -2,7 +2,7 @@ import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { FileText, MousePointerClick, Send, Clock } from "lucide-react"
-
+import Link from "next/link"
 // Forzamos datos frescos siempre
 export const dynamic = 'force-dynamic'
 
@@ -68,7 +68,7 @@ export default async function CampaignsList() {
             </div>
         ) : (
             campaigns.map((camp) => (
-                <Card key={camp.id} className="bg-slate-900/50 border-slate-800 hover:border-indigo-500/30 transition-colors">
+                <><Link key={camp.id} href={`/admin-lab/campaigns/${camp.id}`}></Link><Card key={camp.id} className="bg-slate-900/50 border-slate-800 hover:border-indigo-500/30 transition-colors">
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                         <div className="space-y-1">
                             <CardTitle className="text-lg font-medium text-white flex items-center gap-3">
@@ -78,23 +78,23 @@ export default async function CampaignsList() {
                                 </Badge>
                             </CardTitle>
                             <div className="flex gap-4 text-xs text-slate-400 font-mono">
-                                <span className="flex items-center gap-1"><Clock className="h-3 w-3"/> {new Date(camp.created_at).toLocaleDateString()}</span>
-                                <span className="flex items-center gap-1"><FileText className="h-3 w-3"/> Template: {camp.template_type}</span>
+                                <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {new Date(camp.created_at).toLocaleDateString()}</span>
+                                <span className="flex items-center gap-1"><FileText className="h-3 w-3" /> Template: {camp.template_type}</span>
                             </div>
                         </div>
-                        
+
                         {/* KPI Box de la Campaña */}
                         <div className="flex gap-6 text-right">
                             <div>
                                 <p className="text-xs text-slate-500 uppercase">Enviados</p>
                                 <p className="text-xl font-bold text-slate-200 flex items-center justify-end gap-2">
-                                    {camp.stats.total} <Send className="h-4 w-4 text-slate-600"/>
+                                    {camp.stats.total} <Send className="h-4 w-4 text-slate-600" />
                                 </p>
                             </div>
                             <div>
                                 <p className="text-xs text-slate-500 uppercase">Víctimas</p>
                                 <p className={`text-xl font-bold flex items-center justify-end gap-2 ${camp.stats.clicks > 0 ? 'text-red-400' : 'text-slate-200'}`}>
-                                    {camp.stats.clicks} <MousePointerClick className="h-4 w-4"/>
+                                    {camp.stats.clicks} <MousePointerClick className="h-4 w-4" />
                                 </p>
                             </div>
                             <div>
@@ -105,7 +105,7 @@ export default async function CampaignsList() {
                             </div>
                         </div>
                     </CardHeader>
-                </Card>
+                </Card></>
             ))
         )}
       </div>
