@@ -13,6 +13,7 @@ import {
   Send 
 } from "lucide-react"
 import Link from "next/link"
+import { DownloadReportButton } from "@/components/DownloadReportButton"
 
 // Forzamos que la página sea dinámica para ver los cambios en tiempo real (clics/training)
 export const dynamic = 'force-dynamic'
@@ -83,10 +84,7 @@ export default async function CampaignDetail({ params }: { params: { id: string 
             </div>
         </div>
         
-        {/* Botón de Exportación (Simulado para MVP) */}
-        <Button variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white gap-2">
-            <Download className="h-4 w-4"/> Generar Reporte PDF
-        </Button>
+       <DownloadReportButton campaign={campaign} targets={targets ?? []} />
       </div>
 
       {/* --- KPI CARDS (Dashboard Ejecutivo) --- */}
