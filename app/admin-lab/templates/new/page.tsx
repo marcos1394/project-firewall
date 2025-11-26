@@ -22,6 +22,8 @@ export default function NewTemplatePage() {
   const [html, setHtml] = useState('<div style="padding: 20px; font-family: sans-serif;">\n  <h1>Hola!</h1>\n  <p>Este es un mensaje de prueba.</p>\n  <a href="{{link}}">Clic aquí</a>\n</div>')
   const [subject, setSubject] = useState('Asunto del Correo')
   const [fromName, setFromName] = useState('Soporte')
+  const [name, setName] = useState('')
+  const [category, setCategory] = useState('general')
 
   return (
     <div className="min-h-screen bg-[#0B0F19] text-white p-6 md:p-8">
@@ -32,7 +34,7 @@ export default function NewTemplatePage() {
             <ArrowLeft className="h-5 w-5 text-slate-400"/>
         </Link>
         <div>
-            <h1 className="text-2xl font-bold tracking-tight">La Forja</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Constructor de Plantillas</h1>
             <p className="text-slate-400 text-sm">Diseñador de vectores de ataque.</p>
         </div>
       </div>
@@ -50,7 +52,14 @@ export default function NewTemplatePage() {
                 <form action={formAction} className="space-y-6">
                     <div className="space-y-2">
                         <Label>Nombre Interno</Label>
-                        <Input name="name" placeholder="Ej: Netflix Suspensión" className="bg-slate-950 border-slate-700" required />
+                        <Input 
+                            name="name" 
+                            placeholder="Ej: Netflix Suspensión" 
+                            className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-500" 
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            required 
+                        />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -59,19 +68,25 @@ export default function NewTemplatePage() {
                             <Input 
                                 name="fromName" 
                                 placeholder="Netflix Support" 
-                                className="bg-slate-950 border-slate-700" 
+                                className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-500" 
                                 required 
+                                value={fromName}
                                 onChange={(e) => setFromName(e.target.value)}
                             />
                         </div>
                         <div className="space-y-2">
                             <Label>Categoría</Label>
-                            <select name="category" className="w-full h-10 px-3 rounded-md border border-slate-700 bg-slate-950 text-sm">
-                                <option value="general">General</option>
-                                <option value="financial">Financiero</option>
-                                <option value="urgency">Urgencia</option>
-                                <option value="authority">Autoridad (CEO/Legal)</option>
-                                <option value="service">Servicios (Netflix/Amazon)</option>
+                            <select 
+                                name="category" 
+                                value={category}
+                                onChange={(e) => setCategory(e.target.value)}
+                                className="w-full h-10 px-3 rounded-md border border-slate-700 bg-slate-950 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            >
+                                <option value="general" className="bg-slate-950 text-white">General</option>
+                                <option value="financial" className="bg-slate-950 text-white">Financiero</option>
+                                <option value="urgency" className="bg-slate-950 text-white">Urgencia</option>
+                                <option value="authority" className="bg-slate-950 text-white">Autoridad (CEO/Legal)</option>
+                                <option value="service" className="bg-slate-950 text-white">Servicios (Netflix/Amazon)</option>
                             </select>
                         </div>
                     </div>
@@ -81,8 +96,9 @@ export default function NewTemplatePage() {
                         <Input 
                             name="subject" 
                             placeholder="Tu cuenta ha sido suspendida" 
-                            className="bg-slate-950 border-slate-700" 
+                            className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-500" 
                             required 
+                            value={subject}
                             onChange={(e) => setSubject(e.target.value)}
                         />
                     </div>
@@ -94,7 +110,7 @@ export default function NewTemplatePage() {
                         </Label>
                         <Textarea 
                             name="htmlContent" 
-                            className="bg-slate-950 border-slate-700 font-mono text-xs flex-1 min-h-[300px]" 
+                            className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-500 font-mono text-xs flex-1 min-h-[300px]" 
                             value={html}
                             onChange={(e: { target: { value: SetStateAction<string> } }) => setHtml(e.target.value)}
                             required
