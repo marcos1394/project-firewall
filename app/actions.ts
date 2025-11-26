@@ -220,3 +220,24 @@ export async function launchCampaign(prevState: any, formData: FormData) {
     return { message: 'Error de campaña: ' + e.message, status: 'error' }
   }
 }
+
+// ==========================================
+// 5. REMEDIACIÓN (Marcar como Entrenado)
+// ==========================================
+export async function completeTraining(targetId: string) {
+  if (!targetId) return { error: 'ID inválido' }
+
+  try {
+    const { error } = await supabase
+      .from('campaign_targets')
+      .update({ status: 'trained' }) // Cambiamos de 'clicked' a 'trained'
+      .eq('id', targetId)
+
+    if (error) throw new Error(error.message)
+    
+    return { success: true }
+  } catch (e) {
+    console.error(e)
+    return { error: 'Error al actualizar estado' }
+  }
+}
