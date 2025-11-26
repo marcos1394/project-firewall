@@ -1,46 +1,148 @@
-'use client'
+import { supabase } from '@/lib/supabase'
+import { OverviewChart } from '@/components/OverviewChart'
+import { QuickAttack } from '@/components/QuickAttack'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Users, MousePointerClick, ShieldAlert, Activity, Zap } from "lucide-react"
 
-import { useState } from 'react'
-import { sendSimulation } from '@/app/actions' // Crearemos esta acción en el paso 5
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+// Forzamos que esta página sea dinámica (siempre traiga datos frescos de la DB)
+export const dynamic = 'force-dynamic'
 
-export default function AdminLab() {
-  const [status, setStatus] = useState('')
+async function getStats() {
+  // 1. Obtener conteo de clics reales
+  const { count: clicksCount } = await supabase
+    .from('simulation_clicks')
+    .select('*', { count: 'exact', head: true })
 
-  async function handleAttack(formData: FormData) {
-    setStatus('Enviando ataque...')
-    const result = await sendSimulation(formData)
-    setStatus(result.message)
+  // 2. Obtener conteo de leads (empresas interesadas)
+  const { count: leadsCount } = await supabase
+    .from('leads')
+    .select('*', { count: 'exact', head: true })
+
+  return {
+    clicks: clicksCount || 0,
+    leads: leadsCount || 0,
+    // Simulado: Asumimos que hemos enviado 3 ataques por cada clic para el demo
+    sent: (clicksCount || 0) * 3 + 10 
   }
+}
+
+export default async function AdminDashboard() {
+  const stats = await getStats()
+  
+  // Calculamos riesgo simple
+  const riskPercentage = stats.sent > 0 ? Math.round((stats.clicks / stats.sent) * 100) : 0
 
   return (
-    <div className="min-h-screen bg-black text-white p-20 flex flex-col items-center">
-      <h1 className="text-3xl font-mono text-red-500 mb-8">💀 KINETIS ATTACK LAB</h1>
-      
-      <form action={handleAttack} className="w-full max-w-md space-y-4 border border-red-900 p-8 rounded bg-red-950/10">
-        <label className="text-sm font-mono text-red-300">Target Email (Víctima):</label>
-        <Input 
-            name="email" 
-            type="email" 
-            placeholder="victima@empresa.com" 
-            className="bg-black border-red-800 text-white" 
-            required
-        />
-        
-        <label className="text-sm font-mono text-red-300">Tipo de Ataque:</label>
-        <select name="type" className="w-full bg-black border border-red-800 rounded p-2 text-sm text-white">
-           <option value="google-security">Google: Alerta de Seguridad</option>
-    <option value="hr-payroll">RRHH: Cambio de Nómina (Alta Efectividad)</option>
-    <option value="urgent-file">Legal: Documento Urgente</option>
-        </select>
+    <div className="min-h-screen bg-[#0B0F19] text-white p-8">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+            <h2 className="text-3xl font-bold tracking-tight text-white">Kinetis War Room</h2>
+            <p className="text-slate-400">Monitor de amenazas y simulación activa.</p>
+        </div>
+        <div className="flex items-center space-x-2">
+            <span className="flex h-3 w-3 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span className="text-sm font-mono text-emerald-400">SYSTEM ONLINE</span>
+        </div>
+      </div>
 
-        <Button type="submit" className="w-full bg-red-600 hover:bg-red-700 font-mono">
-           LANZAR SIMULACIÓN
-        </Button>
-      </form>
-      
-      {status && <p className="mt-8 font-mono text-yellow-400">{status}</p>}
+      {/* KPI Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+        <StatsCard 
+            title="Total Enviados" 
+            value={stats.sent.toString()} 
+            icon={<Activity className="h-4 w-4 text-slate-400"/>}
+            desc="+12% desde ayer"
+        />
+        <StatsCard 
+            title="Víctimas (Clics)" 
+            value={stats.clicks.toString()} 
+            icon={<MousePointerClick className="h-4 w-4 text-red-400"/>}
+            desc="Alta vulnerabilidad detectada"
+        />
+        <StatsCard 
+            title="Tasa de Infección" 
+            value={`${riskPercentage}%`} 
+            icon={<ShieldAlert className="h-4 w-4 text-orange-400"/>}
+            desc="El objetivo es < 5%"
+        />
+        <StatsCard 
+            title="Empresas en Beta" 
+            value={stats.leads.toString()} 
+            icon={<Users className="h-4 w-4 text-blue-400"/>}
+            desc="En lista de espera"
+        />
+      </div>
+
+      {/* Main Grid */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        
+        {/* Gráfica Principal (Ocupa 4 columnas) */}
+        <Card className="col-span-4 bg-slate-900/50 border-slate-800">
+          <CardHeader>
+            <CardTitle className="text-white">Tendencia de Vulnerabilidad</CardTitle>
+          </CardHeader>
+          <CardContent className="pl-2">
+            <OverviewChart />
+          </CardContent>
+        </Card>
+
+        {/* Panel de Ataque (Ocupa 3 columnas) */}
+        <Card className="col-span-3 bg-slate-900/50 border-slate-800">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+                <Zap className="h-5 w-5 text-yellow-500"/>
+                Lanzador Táctico
+            </CardTitle>
+            <CardDescription className="text-slate-400">
+              Inicia una simulación de phishing a un objetivo específico.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <QuickAttack />
+            
+            {/* Live Feed Simulado */}
+            <div className="mt-8 pt-6 border-t border-slate-800">
+                <h4 className="text-xs font-mono text-slate-500 uppercase mb-4">Actividad Reciente</h4>
+                <div className="space-y-3 text-xs font-mono">
+                    <div className="flex gap-2 text-slate-300">
+                        <span className="text-emerald-500">[SENT]</span>
+                        <span>Payload 'google-alert' sent to ceo@...</span>
+                    </div>
+                    {stats.clicks > 0 && (
+                        <div className="flex gap-2 text-red-400 animate-pulse">
+                            <span className="font-bold">[CLICK]</span>
+                            <span>Victim detected via iPhone 14 (MX)</span>
+                        </div>
+                    )}
+                    <div className="flex gap-2 text-slate-500">
+                        <span className="text-blue-500">[INFO]</span>
+                        <span>System calibration complete.</span>
+                    </div>
+                </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
+}
+
+function StatsCard({title, value, icon, desc}: any) {
+    return (
+        <Card className="bg-slate-900/50 border-slate-800">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-slate-200">
+              {title}
+            </CardTitle>
+            {icon}
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-white">{value}</div>
+            <p className="text-xs text-slate-500 mt-1">
+              {desc}
+            </p>
+          </CardContent>
+        </Card>
+    )
 }
