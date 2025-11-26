@@ -30,8 +30,9 @@ export default function AdminLab() {
         
         <label className="text-sm font-mono text-red-300">Tipo de Ataque:</label>
         <select name="type" className="w-full bg-black border border-red-800 rounded p-2 text-sm text-white">
-            <option value="password-reset">Google Password Reset</option>
-            {/* Futuro: agregar más plantillas */}
+           <option value="google-security">Google: Alerta de Seguridad</option>
+    <option value="hr-payroll">RRHH: Cambio de Nómina (Alta Efectividad)</option>
+    <option value="urgent-file">Legal: Documento Urgente</option>
         </select>
 
         <Button type="submit" className="w-full bg-red-600 hover:bg-red-700 font-mono">
