@@ -241,3 +241,47 @@ export async function completeTraining(targetId: string) {
     return { error: 'Error al actualizar estado' }
   }
 }
+
+// ==========================================
+// 6. GESTOR DE PLANTILLAS (La Forja)
+// ==========================================
+export async function createTemplate(prevState: any, formData: FormData) {
+  const name = formData.get('name') as string
+  const subject = formData.get('subject') as string
+  const fromName = formData.get('fromName') as string
+  const category = formData.get('category') as string
+  const htmlContent = formData.get('htmlContent') as string
+  
+  // Generar Slug automático (ej: "Black Friday Offer" -> "black-friday-offer")
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+
+  if (!name || !subject || !htmlContent) {
+    return { message: 'Faltan campos obligatorios.', status: 'error' }
+  }
+
+  try {
+    const { error } = await supabase.from('email_templates').insert({
+      name,
+      slug,
+      subject,
+      from_name: fromName,
+      from_email: 'security@kinetis.org', // Forzado por seguridad/reputación
+      category,
+      html_content: htmlContent,
+      difficulty_level: 'medium'
+    })
+
+    if (error) {
+      if (error.code === '23505') return { message: 'Ya existe una plantilla con ese nombre.', status: 'error' }
+      throw new Error(error.message)
+    }
+
+    // Revalidar path si usas cache, o redirect
+    redirect('/admin-lab')
+    
+  } catch (e: any) {
+    // Si es un error de redirect, lo dejamos pasar (Next.js internals)
+    if (e.message === 'NEXT_REDIRECT') throw e
+    return { message: 'Error al crear plantilla: ' + e.message, status: 'error' }
+  }
+}
