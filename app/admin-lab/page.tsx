@@ -100,6 +100,12 @@ export default async function AdminDashboard() {
   </CardHeader>
   <CardContent>
     <CampaignLauncher />
+
+    <div className="mt-4 pt-4 border-t border-slate-800 text-center">
+    <a href="/admin-lab/campaigns" className="text-xs font-mono text-indigo-400 hover:text-indigo-300 hover:underline">
+        VER HISTORIAL COMPLETO DE CAMPAÑAS →
+    </a>
+</div>
             
             {/* Live Feed Simulado */}
             <div className="mt-8 pt-6 border-t border-slate-800">
