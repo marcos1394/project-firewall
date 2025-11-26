@@ -3,6 +3,8 @@
 import { supabase } from '@/lib/supabase'
 import { Resend } from 'resend'
 import { z } from 'zod'
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -74,5 +76,37 @@ export async function sendSimulation(formData: FormData) {
 
   } catch (error) {
     return { message: 'Error de servidor', status: 'error' }
+  }
+}
+
+export async function setAdminCookie(prevState: any, formData: FormData) {
+  const password = formData.get('password') as string
+  const secret = process.env.ADMIN_SECRET
+
+  // Validación básica de seguridad
+  if (!secret) {
+    console.error("FATAL: ADMIN_SECRET no está configurado en variables de entorno.")
+    return { error: 'Error de configuración del servidor.' }
+  }
+
+  if (password === secret) {
+    // En Next.js 15/16, cookies() es asíncrono, usamos await
+    const cookieStore = await cookies()
+    
+    // Establecemos la cookie
+    cookieStore.set('kinetis_admin_session', secret, { 
+      httpOnly: true, // No accesible por JS del cliente (XSS safe)
+      secure: process.env.NODE_ENV === 'production', // Solo HTTPS en prod
+      maxAge: 60 * 60 * 24, // 24 horas
+      path: '/',
+      sameSite: 'strict'
+    })
+    
+    // Redirección exitosa
+    redirect('/admin-lab')
+  } else {
+    // Retardo artificial para evitar ataques de fuerza bruta (Timing attack mitigation)
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    return { error: 'Acceso Denegado: Credenciales inválidas.' }
   }
 }
