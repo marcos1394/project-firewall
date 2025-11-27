@@ -117,55 +117,77 @@ export async function sendSimulation(formData: FormData) {
 // ==========================================
 // 4. GESTOR DE CAMPAÑAS MASIVAS (Bulk Attack)
 // ==========================================
+// Función auxiliar para obtener emails (DRY principle)
+async function getTargets(formData: FormData) {
+  const mode = formData.get('targetMode') as string // 'csv' | 'directory'
+  const organizationId = formData.get('organizationId') as string
+  const csvFile = formData.get('csvFile') as File
+
+  // MODO 1: Directorio Guardado (Smart Targeting)
+  if (mode === 'directory' && organizationId) {
+    const { data: employees } = await supabase
+      .from('employees')
+      .select('email')
+      .eq('organization_id', organizationId)
+    
+    if (!employees || employees.length === 0) {
+      throw new Error('La organización seleccionada no tiene empleados registrados.')
+    }
+    return employees.map(e => e.email)
+  }
+
+  // MODO 2: CSV Manual (Legacy/Tactical)
+  if (csvFile && csvFile.size > 0) {
+    const text = await csvFile.text()
+    const parsed = Papa.parse(text, { header: false })
+    return parsed.data
+      .flat()
+      .map((e: any) => e?.toString().trim())
+      .filter((e) => e && e.includes('@'))
+  }
+
+  throw new Error('Debes subir un CSV o seleccionar una organización.')
+}
+
 export async function launchCampaign(prevState: any, formData: FormData) {
   const campaignName = formData.get('campaignName') as string
   const templateSlug = formData.get('templateType') as string
-  const csvFile = formData.get('csvFile') as File
+  // Capturamos el ID de organización si existe (para asociar la campaña al cliente)
+  const organizationId = formData.get('organizationId') as string || null
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://security.kinetis.org'
 
-  if (!csvFile || csvFile.size === 0) {
-    return { message: 'Por favor sube un archivo CSV válido.', status: 'error' }
-  }
-
   try {
-    // A) Validar que la plantilla existe ANTES de procesar nada
-    const { data: template, error: templateError } = await supabase
+    // 1. Obtener Lista de Objetivos (Lógica abstraída arriba)
+    const emails = await getTargets(formData)
+
+    if (emails.length === 0) return { message: 'Lista de objetivos vacía.', status: 'error' }
+
+    // 2. Validar Plantilla
+    const { data: template } = await supabase
       .from('email_templates')
       .select('*')
       .eq('slug', templateSlug)
       .single()
 
-    if (templateError || !template) {
-      return { message: 'Error crítico: La plantilla seleccionada no existe.', status: 'error' }
-    }
+    if (!template) return { message: 'Plantilla no encontrada.', status: 'error' }
 
-    // B) Leer y Parsear CSV
-    const text = await csvFile.text()
-    const parsed = Papa.parse(text, { header: false })
-    const emails = parsed.data
-      .flat()
-      .map((e: any) => e?.toString().trim())
-      .filter((e) => e && e.includes('@'))
-
-    if (emails.length === 0) {
-      return { message: 'No se encontraron emails válidos en el CSV.', status: 'error' }
-    }
-
-    // C) Crear la Campaña en DB
+    // 3. Crear Campaña
+    // AHORA guardamos el organization_id para que el reporte salga en el dashboard del cliente
     const { data: campaign, error: campError } = await supabase
       .from('campaigns')
       .insert({ 
         name: campaignName, 
         template_type: templateSlug, 
-        status: 'sending' 
+        status: 'sending',
+        organization_id: organizationId // Vinculación clave
       })
       .select()
       .single()
 
     if (campError) throw new Error(campError.message)
 
-    // D) Insertar Objetivos (Bulk Insert)
+    // 4. Insertar Targets
     const targetsData = emails.map(email => ({
       campaign_id: campaign.id,
       email: email,
@@ -178,14 +200,10 @@ export async function launchCampaign(prevState: any, formData: FormData) {
 
     if (targetsError) throw new Error(targetsError.message)
 
-    // E) Loop de Envío (Procesamiento por Lotes)
+    // 5. Loop de Envío
     let sentCount = 0
-
     await Promise.all(emails.map(async (email) => {
-      // Link único usando el ID de la CAMPAÑA
       const trackingLink = `${baseUrl}/api/track?email=${encodeURIComponent(email)}&c=${campaign.id}`
-      
-      // Inyección dinámica de link en el HTML de la DB
       const finalHtml = template.html_content.replace('{{link}}', trackingLink)
 
       const { error } = await resend.emails.send({
@@ -196,7 +214,6 @@ export async function launchCampaign(prevState: any, formData: FormData) {
       })
 
       if (!error) {
-        // Actualizar estado a 'sent' (fuego y olvido para no bloquear)
         supabase.from('campaign_targets')
           .update({ status: 'sent', sent_at: new Date().toISOString() })
           .match({ campaign_id: campaign.id, email: email })
@@ -205,19 +222,16 @@ export async function launchCampaign(prevState: any, formData: FormData) {
       }
     }))
 
-    // F) Finalizar Campaña
-    await supabase.from('campaigns')
-      .update({ status: 'completed' })
-      .eq('id', campaign.id)
+    // 6. Cerrar
+    await supabase.from('campaigns').update({ status: 'completed' }).eq('id', campaign.id)
 
     return { 
-      message: `Campaña '${campaignName}' finalizada. ${sentCount}/${emails.length} correos enviados con plantilla '${template.name}'.`, 
+      message: `Operación Exitosa. ${sentCount}/${emails.length} objetivos impactados.`, 
       status: 'success' 
     }
 
   } catch (e: any) {
-    console.error(e)
-    return { message: 'Error de campaña: ' + e.message, status: 'error' }
+    return { message: e.message, status: 'error' }
   }
 }
 
