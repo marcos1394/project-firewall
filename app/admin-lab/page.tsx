@@ -3,6 +3,9 @@ import { OverviewChart } from '@/components/OverviewChart'
 import { CampaignLauncher } from '@/components/CampaignLauncher'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, MousePointerClick, ShieldAlert, Activity, Zap } from "lucide-react"
+import { Button } from '@/components/ui/button'
+import { auth, signOut } from '@/auth'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 // Forzamos que esta página sea dinámica (siempre traiga datos frescos de la DB)
 export const dynamic = 'force-dynamic'
@@ -28,21 +31,41 @@ async function getStats() {
 
 export default async function AdminDashboard() {
   const stats = await getStats()
+  const session = await auth() // Obtener sesión actual
   
   // Calculamos riesgo simple
   const riskPercentage = stats.sent > 0 ? Math.round((stats.clicks / stats.sent) * 100) : 0
 
   return (
     <div className="min-h-screen bg-[#0B0F19] text-white p-8">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+     {/* HEADER CON PERFIL */}
+      <div className="flex items-center justify-between mb-8 border-b border-slate-800 pb-6">
         <div>
             <h2 className="text-3xl font-bold tracking-tight text-white">Kinetis War Room</h2>
-            <p className="text-slate-400">Monitor de amenazas y simulación activa.</p>
+            <p className="text-slate-400">Bienvenido, {session?.user?.name}</p>
         </div>
-        <div className="flex items-center space-x-2">
-            <span className="flex h-3 w-3 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span className="text-sm font-mono text-emerald-400">SYSTEM ONLINE</span>
+        
+        <div className="flex items-center gap-4">
+            <div className="text-right hidden md:block">
+                <p className="text-sm font-bold text-white">{session?.user?.email}</p>
+                <p className="text-xs text-indigo-400 uppercase font-mono">
+                    Role: { (session?.user as any)?.role || 'INVITADO' }
+                </p>
+            </div>
+            <Avatar className="h-10 w-10 border border-slate-700">
+                <AvatarImage src={session?.user?.image || ''} />
+                <AvatarFallback>KN</AvatarFallback>
+            </Avatar>
+            
+            {/* Botón de Logout */}
+            <form action={async () => {
+                'use server'
+                await signOut({ redirectTo: "/login" })
+            }}>
+                <Button variant="outline" size="sm" className="border-red-900/50 text-red-400 hover:bg-red-950 hover:text-red-300">
+                    Salir
+                </Button>
+            </form>
         </div>
       </div>
 
