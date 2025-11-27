@@ -1,24 +1,13 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { auth } from "@/auth"
 
-// Exportamos la función nombrada 'proxy' como dicta la documentación de Next.js 16
-export function proxy(request: NextRequest) {
-  // 1. Obtenemos la cookie de sesión
-  const authCookie = request.cookies.get('kinetis_admin_session')
-  const secret = process.env.ADMIN_SECRET || 'secret' // Fallback por seguridad
+// En lugar de escribir lógica manual con cookies,
+// exportamos la función 'auth' que ya contiene toda la seguridad.
+// NextAuth se encarga de validar la sesión y redirigir si es necesario.
+export const proxy = auth
 
-  // 2. Verificamos si la cookie coincide con el secreto
-  if (authCookie?.value !== secret) {
-    // Si no es válida, redirigimos al login
-    // Usamos request.url para construir la URL absoluta correctamente
-    return NextResponse.redirect(new URL('/admin-login', request.url))
-  }
-
-  // 3. Si todo está bien, dejamos pasar la petición
-  return NextResponse.next()
-}
-
-// Configuración: Solo ejecutamos el Proxy en las rutas de admin
 export const config = {
-  matcher: '/admin-lab/:path*',
-}
+  // Matcher actualizado:
+  // Intercepta todo EXCEPTO archivos estáticos, imágenes y la API de autenticación
+  // Esto asegura que el login de Google/Microsoft no sea bloqueado por el propio proxy
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+}s
