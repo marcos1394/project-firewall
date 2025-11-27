@@ -10,4 +10,4 @@ export const config = {
   // Intercepta todo EXCEPTO archivos estáticos, imágenes y la API de autenticación
   // Esto asegura que el login de Google/Microsoft no sea bloqueado por el propio proxy
   matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
-}s
+}
