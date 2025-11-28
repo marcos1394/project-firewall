@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState } from 'react' // Usamos el hook moderno de React 19
-import { setAdminCookie } from '@/app/actions'
+import { setAdminCookie } from '@/actions/auth'
 import { ShieldAlert, Lock } from 'lucide-react'
 
 const initialState = {

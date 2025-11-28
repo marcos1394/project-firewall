@@ -2,17 +2,21 @@ import { supabase } from '@/lib/supabase'
 import { IntegrationsPanel } from '@/components/IntegrationsPanel'
 import { BreachRadar } from '@/components/BreachRadar'
 import { LeaksTable } from '@/components/LeaksTable'
+import { CISAuditor } from '@/components/CISAuditor' // Nuevo: Gatillo de auditoría
+import { AuditResults } from '@/components/AuditResults' // Nuevo: Resultados visuales
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Users, ShieldAlert, Zap, Building2, Lock, CheckCircle2 } from "lucide-react"
+import { ArrowLeft, Users, ShieldAlert, Zap, Building2, CheckCircle2, Lock } from "lucide-react"
 import Link from "next/link"
 
-// Forzamos renderizado dinámico para ver actualizaciones en tiempo real
+// Forzamos renderizado dinámico para ver datos en tiempo real (vital para auditorías)
 export const dynamic = 'force-dynamic'
 
-// Función de carga de datos
+// ==========================================
+// CARGA DE DATOS (DATA FETCHING)
+// ==========================================
 async function getOrgDetails(id: string) {
   // 1. Datos de la Organización
   const { data: org } = await supabase
@@ -21,7 +25,7 @@ async function getOrgDetails(id: string) {
     .eq('id', id)
     .single()
 
-  if (!org) return { org: null, employees: [], leaks: [] }
+  if (!org) return { org: null, employees: [], leaks: [], auditLogs: [] }
 
   // 2. Lista de Empleados
   const { data: employees } = await supabase
@@ -30,27 +34,37 @@ async function getOrgDetails(id: string) {
     .eq('organization_id', id)
     .order('created_at', { ascending: false })
 
-  // 3. Lista de Fugas (Leaks)
-  // Obtenemos los leaks que coincidan con los IDs de los empleados de esta org
+  // 3. Lista de Fugas (Leaks) - Dark Web
   const employeeIds = employees?.map((e: any) => e.id) || []
-  
   let leaks: any[] = []
   
   if (employeeIds.length > 0) {
     const { data } = await supabase
       .from('employee_leaks')
-      .select('*, employees(email)') // Join para traer el email
+      .select('*, employees(email)') 
       .in('employee_id', employeeIds)
       .order('detected_at', { ascending: false })
     
     if (data) leaks = data
   }
 
-  return { org, employees, leaks }
+  // 4. Historial de Auditorías Técnicas (CIS Benchmark)
+  // Traemos los últimos 10 registros para mostrar el estado actual
+  const { data: auditLogs } = await supabase
+    .from('cis_audit_logs')
+    .select('*')
+    .eq('organization_id', id)
+    .order('scanned_at', { ascending: false })
+    .limit(10)
+
+  return { org, employees, leaks, auditLogs }
 }
 
+// ==========================================
+// PÁGINA PRINCIPAL DE CLIENTE (BÚNKER)
+// ==========================================
 export default async function ClientDetailPage({ params }: { params: { id: string } }) {
-  const { org, employees, leaks } = await getOrgDetails(params.id)
+  const { org, employees, leaks, auditLogs } = await getOrgDetails(params.id)
 
   if (!org) {
     return (
@@ -63,15 +77,17 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
     )
   }
 
-  // --- CÁLCULO DE MÉTRICAS ---
+  // --- CÁLCULO DE MÉTRICAS RÁPIDAS ---
   const totalEmployees = employees?.length || 0
   const compromisedCount = employees?.filter((e: any) => e.risk_level === 'vulnerable' || e.risk_level === 'critical').length || 0
   const leaksCount = leaks?.length || 0
   
-  // Cálculo de Score de Seguridad (Inverso al riesgo)
-  // Si risk_score en DB es 0, lo calculamos basado en empleados comprometidos
+  // Cálculo de Score de Seguridad
   const calculatedRisk = totalEmployees > 0 ? Math.round((compromisedCount / totalEmployees) * 100) : 0
   const displayRisk = org.risk_score > 0 ? org.risk_score : calculatedRisk
+
+  // Fecha del último escaneo técnico
+  const lastScanDate = auditLogs && auditLogs.length > 0 ? auditLogs[0].scanned_at : undefined
 
   return (
     <div className="min-h-screen bg-[#0B0F19] text-white p-8">
@@ -100,10 +116,10 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
             </div>
         </div>
         
-        {/* Acciones de Nivel Cliente */}
+        {/* Acciones Rápidas */}
         <div className="flex gap-2">
             <Button variant="secondary" className="bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700 gap-2">
-                <Zap className="h-4 w-4 text-yellow-500"/> Nueva Campaña
+                <Zap className="h-4 w-4 text-yellow-500"/> Nueva Campaña Phishing
             </Button>
         </div>
       </div>
@@ -116,7 +132,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
             {/* 1. TARJETA DE RIESGO */}
             <Card className="bg-slate-900/50 border-slate-800">
                 <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-                    <CardTitle className="text-xs font-bold text-slate-500 uppercase tracking-wider">Estado de Seguridad</CardTitle>
+                    <CardTitle className="text-xs font-bold text-slate-500 uppercase tracking-wider">Estado de Riesgo Humano</CardTitle>
                     {displayRisk > 50 ? <ShieldAlert className="h-4 w-4 text-red-500"/> : <CheckCircle2 className="h-4 w-4 text-emerald-500"/>}
                 </CardHeader>
                 <CardContent>
@@ -127,7 +143,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
                         <span className="text-sm text-slate-400 font-medium">Exposición</span>
                     </div>
                     
-                    {/* Barra de Progreso Custom */}
+                    {/* Barra de Progreso */}
                     <div className="h-2 w-full bg-slate-950 rounded-full overflow-hidden border border-slate-800">
                         <div 
                             className={`h-full transition-all duration-1000 ${displayRisk > 50 ? 'bg-red-600' : displayRisk > 20 ? 'bg-orange-500' : 'bg-emerald-500'}`} 
@@ -138,34 +154,52 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
                     <p className="text-xs text-slate-500 mt-4 flex items-start gap-2">
                         <Users className="h-3 w-3 mt-0.5 shrink-0"/>
                         <span>
-                            <strong className="text-slate-300">{compromisedCount}</strong> de <strong className="text-slate-300">{totalEmployees}</strong> empleados marcados como vulnerables.
+                            <strong className="text-slate-300">{compromisedCount}</strong> empleados han fallado pruebas de phishing recientes.
                         </span>
                     </p>
                 </CardContent>
             </Card>
 
-            {/* 2. BREACH RADAR (Escáner Dark Web) */}
+            {/* 2. NUEVO: AUDITOR TÉCNICO CIS (Cloud Compliance) */}
+            <CISAuditor organizationId={org.id} lastScan={lastScanDate} />
+
+            {/* 3. BREACH RADAR (Dark Web Intelligence) */}
             <BreachRadar organizationId={org.id} leaksCount={leaksCount} />
 
-            {/* 3. PANEL DE INTEGRACIONES (Sincronización) */}
+            {/* 4. PANEL DE INTEGRACIONES (Sync Microsoft/Google) */}
             <IntegrationsPanel organizationId={org.id} />
             
         </div>
 
-        {/* --- COLUMNA DERECHA (Datos & Directorio) --- */}
+        {/* --- COLUMNA DERECHA (Evidencia & Datos) --- */}
         <div className="lg:col-span-2 space-y-6">
             
-            {/* 1. TABLA DE FUGAS (Solo visible si hay leaks) */}
+            {/* 1. NUEVO: RESULTADOS DE AUDITORÍA TÉCNICA (Si existen) */}
+            {auditLogs && auditLogs.length > 0 && (
+                <div className="animate-in fade-in slide-in-from-bottom-4">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                            <Lock className="h-5 w-5 text-indigo-400"/>
+                            Postura de Seguridad (CIS Benchmark)
+                        </h2>
+                        <Badge variant="outline" className="text-indigo-300 border-indigo-500/30">Nivel 1</Badge>
+                    </div>
+                    {/* Componente visual de resultados */}
+                    <AuditResults logs={auditLogs} />
+                </div>
+            )}
+
+            {/* 2. TABLA DE FUGAS (Solo si hay leaks en Dark Web) */}
             {leaks && leaks.length > 0 && (
                 <LeaksTable leaks={leaks} />
             )}
 
-            {/* 2. DIRECTORIO DE EMPLEADOS */}
+            {/* 3. DIRECTORIO DE EMPLEADOS */}
             <Card className="bg-slate-900/50 border-slate-800 flex flex-col min-h-[500px]">
                 <CardHeader className="flex flex-row items-center justify-between border-b border-slate-800/50 pb-4">
                     <div className="space-y-1">
                         <CardTitle className="flex items-center gap-2 text-white">
-                            <Users className="h-5 w-5 text-indigo-400"/>
+                            <Users className="h-5 w-5 text-slate-400"/>
                             Directorio Activo
                         </CardTitle>
                         <p className="text-xs text-slate-500">Base de datos de empleados monitoreados.</p>
@@ -182,7 +216,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
                                 <TableHead className="text-slate-500 h-10 text-[10px] uppercase font-bold tracking-wider w-[40%]">Identidad</TableHead>
                                 <TableHead className="text-slate-500 h-10 text-[10px] uppercase font-bold tracking-wider">Rol</TableHead>
                                 <TableHead className="text-slate-500 h-10 text-[10px] uppercase font-bold tracking-wider text-center">Nivel Riesgo</TableHead>
-                                <TableHead className="text-slate-500 h-10 text-[10px] uppercase font-bold tracking-wider text-right">Leaks / Fallos</TableHead>
+                                <TableHead className="text-slate-500 h-10 text-[10px] uppercase font-bold tracking-wider text-right">Incidencias</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -201,11 +235,11 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
                                     </TableCell>
                                     <TableCell className="text-center">
                                         {emp.risk_level === 'critical' ? (
-                                            <Badge className="bg-red-500/10 text-red-400 border-red-500/20 text-[10px] hover:bg-red-500/20">CRÍTICO</Badge>
+                                            <Badge className="bg-red-500/10 text-red-400 border-red-500/20 text-[10px]">CRÍTICO</Badge>
                                         ) : emp.risk_level === 'vulnerable' ? (
-                                            <Badge className="bg-orange-500/10 text-orange-400 border-orange-500/20 text-[10px] hover:bg-orange-500/20">ALTO</Badge>
+                                            <Badge className="bg-orange-500/10 text-orange-400 border-orange-500/20 text-[10px]">ALTO</Badge>
                                         ) : (
-                                            <Badge variant="secondary" className="bg-slate-800 text-slate-500 border-slate-700 text-[10px] hover:bg-slate-700">NORMAL</Badge>
+                                            <Badge variant="secondary" className="bg-slate-800 text-slate-500 border-slate-700 text-[10px]">NORMAL</Badge>
                                         )}
                                     </TableCell>
                                     <TableCell className="text-right">
@@ -234,7 +268,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
                                         <div className="flex flex-col items-center justify-center gap-3 opacity-50">
                                             <Users className="h-12 w-12 text-slate-600"/>
                                             <p className="text-slate-400 text-sm">Directorio vacío</p>
-                                            <p className="text-xs text-slate-600">Usa el panel izquierdo para añadir empleados.</p>
+                                            <p className="text-xs text-slate-600">Usa el panel izquierdo para añadir empleados o sincronizar.</p>
                                         </div>
                                     </TableCell>
                                 </TableRow>
