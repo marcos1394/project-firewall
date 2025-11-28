@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState } from 'react' // NUEVO: Importación correcta para React 19
-import { submitLead } from '@/app/actions'
+import { submitLead } from '@/actions/leads'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Loader2 } from "lucide-react"

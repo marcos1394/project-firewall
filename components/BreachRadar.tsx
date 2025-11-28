@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { scanOrganizationBreaches } from '@/app/actions'
+import { scanOrganizationBreaches } from '@/actions/intelligence'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Radar, ShieldAlert, CheckCircle2, Lock, AlertTriangle, Loader2 } from "lucide-react"

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { importDirectory } from '@/app/actions' // Asegúrate de que esta función esté en tu actions.ts (paso anterior)
+import { importDirectory } from '@/actions/organization' // Asegúrate de que esta función esté en tu actions.ts (paso anterior)
 import { Button } from "@/components/ui/button"
 import { UploadCloud, Loader2, FileSpreadsheet, CheckCircle2, AlertTriangle } from "lucide-react"
 

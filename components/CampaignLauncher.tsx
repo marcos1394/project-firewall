@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { launchCampaign } from '@/app/actions'
+import { launchCampaign } from '@/actions/campaigns'
 import { createClient } from '@supabase/supabase-js'
 import { TemplateGallery } from './TemplateGallery'
 import { Button } from "@/components/ui/button"

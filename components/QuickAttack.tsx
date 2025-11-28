@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { sendSimulation } from '@/app/actions' 
+import { sendSimulation } from '@/actions/campaigns' 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select" // Asegúrate de tener select instalado o usa HTML nativo estilizado

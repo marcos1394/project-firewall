@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { syncMicrosoftDirectory, addSingleEmployee } from '@/app/actions'
+import { syncMicrosoftDirectory, addSingleEmployee } from '@/actions/organization'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"

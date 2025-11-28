@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { completeTraining } from '@/app/actions'
+import { completeTraining } from '@/actions/training'
 import { Button } from "@/components/ui/button"
 import { CheckCircle2, Loader2, ArrowRight } from "lucide-react"
 import { useRouter } from 'next/navigation' // Importante para refrescar o redirigir

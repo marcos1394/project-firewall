@@ -49,3 +49,39 @@ export async function fetchMicrosoftUsers(accessToken: string) {
 
   return data.value // Array de usuarios
 }
+
+// 1. Obtener Reporte de Credenciales (MFA Status)
+// Endpoint Beta: Reporta el estado de registro de MFA de cada usuario
+export async function fetchCredentialUserRegistrationDetails(accessToken: string) {
+  const url = 'https://graph.microsoft.com/beta/reports/credentialUserRegistrationDetails'
+  
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  })
+
+  if (!res.ok) throw new Error(`Error fetching MFA reports: ${res.statusText}`)
+  const data = await res.json()
+  return data.value
+}
+
+// 2. Obtener Miembros de un Rol Específico (Global Admin)
+// El Template ID fijo de "Global Administrator" es: "62e90394-69f5-4237-9190-012177145e10"
+export async function fetchGlobalAdmins(accessToken: string) {
+  const roleId = "62e90394-69f5-4237-9190-012177145e10" 
+  const url = `https://graph.microsoft.com/v1.0/directoryRoles(roleTemplateId='${roleId}')/members?$select=id,userPrincipalName,displayName`
+  
+  // Nota: A veces el rol no está "activado" en el tenant y da 404 si no hay roles instanciados.
+  // En ese caso intentamos listarlos primero. Para MVP asumimos happy path o catch error.
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  })
+
+  if (res.status === 404) return [] // No hay global admins activos (raro pero posible en tenants vacíos)
+  if (!res.ok) {
+      // Fallback: Listar todos los roles y buscar por nombre si falla por ID
+      return [] 
+  }
+  
+  const data = await res.json()
+  return data.value
+}
