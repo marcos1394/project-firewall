@@ -18,44 +18,61 @@ export const dynamic = 'force-dynamic'
 // CARGA DE DATOS (DATA FETCHING)
 // ==========================================
 async function getOrgDetails(id: string) {
-  // 1. Datos de la Organización
-  const { data: org } = await supabase
+  console.log("🔍 Buscando Organización con ID:", id) // 1. Verificamos qué ID llega
+
+  // 1. Datos de la Organización (Con manejo de error explícito)
+  const { data: org, error: orgError } = await supabase
     .from('organizations')
     .select('*')
     .eq('id', id)
     .single()
 
-  if (!org) return { org: null, employees: [], leaks: [], auditLogs: [] }
+  if (orgError) {
+    console.error("❌ ERROR CRÍTICO SUPABASE (Organización):", orgError)
+    // PGRST116 significa "The result contains 0 rows" (No encontrado)
+    // 22P02 significa "Invalid input syntax for type uuid" (ID mal formado)
+  }
+
+  if (!org) {
+      console.warn("⚠️ La consulta no devolvió datos para el ID:", id)
+      return { org: null, employees: [], leaks: [], auditLogs: [] }
+  }
+
+  console.log("✅ Organización encontrada:", org.name)
 
   // 2. Lista de Empleados
-  const { data: employees } = await supabase
+  const { data: employees, error: empError } = await supabase
     .from('employees')
     .select('*')
     .eq('organization_id', id)
     .order('created_at', { ascending: false })
 
-  // 3. Lista de Fugas (Leaks) - Dark Web
+  if (empError) console.error("❌ Error fetching employees:", empError)
+
+  // 3. Lista de Fugas (Leaks)
   const employeeIds = employees?.map((e: any) => e.id) || []
   let leaks: any[] = []
   
   if (employeeIds.length > 0) {
-    const { data } = await supabase
+    const { data, error: leakError } = await supabase
       .from('employee_leaks')
       .select('*, employees(email)') 
       .in('employee_id', employeeIds)
       .order('detected_at', { ascending: false })
     
+    if (leakError) console.error("❌ Error fetching leaks:", leakError)
     if (data) leaks = data
   }
 
-  // 4. Historial de Auditorías Técnicas (CIS Benchmark)
-  // Traemos los últimos 10 registros para mostrar el estado actual
-  const { data: auditLogs } = await supabase
+  // 4. Historial CIS
+  const { data: auditLogs, error: auditError } = await supabase
     .from('cis_audit_logs')
     .select('*')
     .eq('organization_id', id)
     .order('scanned_at', { ascending: false })
     .limit(10)
+
+  if (auditError) console.error("❌ Error fetching audit logs:", auditError)
 
   return { org, employees, leaks, auditLogs }
 }
