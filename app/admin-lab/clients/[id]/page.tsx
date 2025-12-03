@@ -13,6 +13,7 @@ import Link from "next/link"
 
 // Forzamos renderizado dinámico para ver datos en tiempo real (vital para auditorías)
 export const dynamic = 'force-dynamic'
+type Params = Promise<{ id: string }>
 
 // ==========================================
 // CARGA DE DATOS (DATA FETCHING)
@@ -80,8 +81,18 @@ async function getOrgDetails(id: string) {
 // ==========================================
 // PÁGINA PRINCIPAL DE CLIENTE (BÚNKER)
 // ==========================================
-export default async function ClientDetailPage({ params }: { params: { id: string } }) {
-  const { org, employees, leaks, auditLogs } = await getOrgDetails(params.id)
+export default async function ClientDetailPage(props: { params: Params }) {
+  // 1. AWAIT OBLIGATORIO: Desempaquetamos los params
+  const params = await props.params
+  const organizationId = params.id
+
+  // Validación de seguridad para que no explote la DB
+  if (!organizationId || organizationId === 'undefined') {
+      return <div className="p-8 text-red-500">Error: ID de organización no válido.</div>
+  }
+
+  // Ahora sí llamamos a la función con el ID limpio
+  const { org, employees, leaks, auditLogs } = await getOrgDetails(organizationId)
 
   if (!org) {
     return (
