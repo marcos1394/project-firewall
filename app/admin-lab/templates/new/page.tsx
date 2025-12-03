@@ -1,7 +1,7 @@
 'use client'
 
 import { SetStateAction, useActionState, useState } from 'react' // Next.js 15/16 hook
-import { createTemplate } from '@/app/actions'
+import { createTemplate } from '@/actions/campaigns'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
